@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+// src/components/QuestionForm.js
+import React, { useState, useEffect } from "react";
 
-function QuestionForm(props) {
+function QuestionForm({ onAddQuestion, onUpdateQuestion }) {
   const [formData, setFormData] = useState({
     prompt: "",
     answer1: "",
@@ -17,9 +18,57 @@ function QuestionForm(props) {
     });
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    console.log(formData);
+
+    const newQuestion = {
+      prompt: formData.prompt,
+      answers: [formData.answer1, formData.answer2, formData.answer3, formData.answer4],
+      correctIndex: parseInt(formData.correctIndex, 10),
+    };
+
+    // Call onAddQuestion if creating a new question
+    await fetch("http://localhost:4000/questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newQuestion),
+    });
+
+    if (onAddQuestion) {
+      onAddQuestion(newQuestion);
+    }
+
+    // Clear form data after submission
+    setFormData({
+      prompt: "",
+      answer1: "",
+      answer2: "",
+      answer3: "",
+      answer4: "",
+      correctIndex: 0,
+    });
+  }
+
+  async function handleDropdownChange(event) {
+    const updatedIndex = parseInt(event.target.value, 10);
+
+    // Update local state
+    setFormData({
+      ...formData,
+      correctIndex: updatedIndex,
+    });
+
+    // Send PATCH request to update the server
+    await fetch(`http://localhost:4000/questions/${formData.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correctIndex: updatedIndex }),
+    });
+
+    // Call onUpdateQuestion if provided
+    if (onUpdateQuestion) {
+      onUpdateQuestion(formData.id, { correctIndex: updatedIndex });
+    }
   }
 
   return (
@@ -76,7 +125,7 @@ function QuestionForm(props) {
           <select
             name="correctIndex"
             value={formData.correctIndex}
-            onChange={handleChange}
+            onChange={handleDropdownChange}
           >
             <option value="0">{formData.answer1}</option>
             <option value="1">{formData.answer2}</option>
